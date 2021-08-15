@@ -173,8 +173,8 @@ STATIC_ASSERT((ISA_MASK & ISA_MAGIC_MASK) == 0);
 STATIC_ASSERT((~ISA_MAGIC_MASK & ISA_MAGIC_VALUE) == 0);
 
 // die if virtual address space bound goes up
-STATIC_ASSERT((~ISA_MASK & MACH_VM_MAX_ADDRESS) == 0  ||  
-              ISA_MASK + sizeof(void*) == MACH_VM_MAX_ADDRESS);
+//STATIC_ASSERT((~ISA_MASK & MACH_VM_MAX_ADDRESS) == 0  ||  
+//              ISA_MASK + sizeof(void*) == MACH_VM_MAX_ADDRESS);
 
 // SUPPORT_PACKED_ISA
 #else
@@ -3544,7 +3544,8 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 # if TARGET_OS_OSX
         // Disable non-pointer isa if the app is too old
         // (linked before OS X 10.11)
-        if (!dyld_program_sdk_at_least(dyld_platform_version_macOS_10_11)) {
+//        if (!dyld_program_sdk_at_least(dyld_platform_version_macOS_10_11)) {
+        if (!(dyld_get_program_sdk_version() >= DYLD_MACOSX_VERSION_10_11)) {
             DisableNonpointerIsa = true;
             if (PrintRawIsa) {
                 _objc_inform("RAW ISA: disabling non-pointer isa because "
@@ -8325,7 +8326,8 @@ classSlotForTagIndex(objc_tag_index_t tag)
 static void
 initializeTaggedPointerObfuscator(void)
 {
-    if (!DisableTaggedPointerObfuscation && dyld_program_sdk_at_least(dyld_fall_2018_os_versions)) {
+//    if (!DisableTaggedPointerObfuscation && dyld_program_sdk_at_least(dyld_fall_2018_os_versions)) {
+    if (!DisableTaggedPointerObfuscation) {
         // Pull random data into the variable, then shift away all non-payload bits.
         arc4random_buf(&objc_debug_taggedpointer_obfuscator,
                        sizeof(objc_debug_taggedpointer_obfuscator));

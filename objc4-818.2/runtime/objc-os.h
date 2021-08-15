@@ -1042,12 +1042,54 @@ ustrdupMaybeNil(const uint8_t *str)
 // This version order matches OBJC_AVAILABLE.
 //
 // NOTE: prefer dyld_program_sdk_at_least when possible
-#define sdkIsAtLeast(x, i, t, w, b)                                    \
-    (dyld_program_sdk_at_least(dyld_platform_version_macOS_ ## x)   || \
-     dyld_program_sdk_at_least(dyld_platform_version_iOS_ ## i)     || \
-     dyld_program_sdk_at_least(dyld_platform_version_tvOS_ ## t)    || \
-     dyld_program_sdk_at_least(dyld_platform_version_watchOS_ ## w) || \
-     dyld_program_sdk_at_least(dyld_platform_version_bridgeOS_ ## b))
+//#define sdkIsAtLeast(x, i, t, w, b)                                    \
+//    (dyld_program_sdk_at_least(dyld_platform_version_macOS_ ## x)   || \
+//     dyld_program_sdk_at_least(dyld_platform_version_iOS_ ## i)     || \
+//     dyld_program_sdk_at_least(dyld_platform_version_tvOS_ ## t)    || \
+//     dyld_program_sdk_at_least(dyld_platform_version_watchOS_ ## w) || \
+//     dyld_program_sdk_at_least(dyld_platform_version_bridgeOS_ ## b))
+
+#if TARGET_OS_OSX
+#   define DYLD_OS_VERSION(x, i, t, w, b) DYLD_MACOSX_VERSION_##x
+#   define sdkVersion() dyld_get_program_sdk_version()
+
+#elif TARGET_OS_IOS
+#   define DYLD_OS_VERSION(x, i, t, w, b) DYLD_IOS_VERSION_##i
+#   define sdkVersion() dyld_get_program_sdk_version()
+
+#elif TARGET_OS_TV
+    // dyld does not currently have distinct constants for tvOS
+#   define DYLD_OS_VERSION(x, i, t, w, b) DYLD_IOS_VERSION_##t
+#   define sdkVersion() dyld_get_program_sdk_version()
+
+#elif TARGET_OS_BRIDGE
+#   if TARGET_OS_WATCH
+#       error bridgeOS 1.0 not supported
+#   endif
+    // fixme don't need bridgeOS versioning yet
+#   define DYLD_OS_VERSION(x, i, t, w, b) DYLD_IOS_VERSION_##t
+#   define sdkVersion() dyld_get_program_sdk_bridge_os_version()
+
+#elif TARGET_OS_WATCH
+#   define DYLD_OS_VERSION(x, i, t, w, b) DYLD_WATCHOS_VERSION_##w
+    // watchOS has its own API for compatibility reasons
+#   define sdkVersion() dyld_get_program_sdk_watch_os_version()
+
+#else
+#   error unknown OS
+#endif
+
+#define sdkIsOlderThan(x, i, t, w, b)                           \
+            (sdkVersion() < DYLD_OS_VERSION(x, i, t, w, b))
+#define sdkIsAtLeast(x, i, t, w, b)                             \
+            (sdkVersion() >= DYLD_OS_VERSION(x, i, t, w, b))
+
+// Allow bare 0 to be used in DYLD_OS_VERSION() and sdkIsOlderThan()
+#define DYLD_MACOSX_VERSION_0 0
+#define DYLD_IOS_VERSION_0 0
+#define DYLD_TVOS_VERSION_0 0
+#define DYLD_WATCHOS_VERSION_0 0
+#define DYLD_BRIDGEOS_VERSION_0 0
 
 
 #ifndef __BUILDING_OBJCDT__

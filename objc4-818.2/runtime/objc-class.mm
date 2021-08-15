@@ -160,7 +160,7 @@
 #include "objc-abi.h"
 #include <objc/message.h>
 #if !TARGET_OS_WIN32
-#include <os/linker_set.h>
+//#include <os/linker_set.h>
 #endif
 
 /***********************************************************************
@@ -893,13 +893,13 @@ inform_duplicate(const char *name, Class oldCls, Class newCls)
     const char *newName = newHeader ? newHeader->fname() : "??";
     const objc_duplicate_class **_dupi = NULL;
 
-    LINKER_SET_FOREACH(_dupi, const objc_duplicate_class **, "__objc_dupclass") {
-        const objc_duplicate_class *dupi = *_dupi;
-
-        if (strcmp(dupi->name, name) == 0) {
-            return;
-        }
-    }
+//    LINKER_SET_FOREACH(_dupi, const objc_duplicate_class **, "__objc_dupclass") {
+//        const objc_duplicate_class *dupi = *_dupi;
+//
+//        if (strcmp(dupi->name, name) == 0) {
+//            return;
+//        }
+//    }
 
     (DebugDuplicateClasses ? _objc_fatal : _objc_inform)
         ("Class %s is implemented in both %s (%p) and %s (%p). "
