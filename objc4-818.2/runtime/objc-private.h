@@ -75,6 +75,7 @@ namespace {
     struct SideTable;
 };
 
+// <F7> isa.h包含了isa所需的结构宏定义
 #include "isa.h"
 
 union isa_t {
