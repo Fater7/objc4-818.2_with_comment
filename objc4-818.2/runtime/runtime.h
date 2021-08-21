@@ -38,6 +38,10 @@
 
 /* Types */
 
+// ----------------------------------------------------------
+// OBJC_TYPES_DEFINED在objc-private.h中定义为1，该部分代码无效。
+// objc_class的最新定义见objc_runtime_new.h。
+
 #if !OBJC_TYPES_DEFINED
 
 /// An opaque type that represents a method in a class definition.
@@ -71,6 +75,8 @@ struct objc_class {
 /* Use `Class` instead of `struct objc_class *` */
 
 #endif
+
+// ----------------------------------------------------------
 
 #ifdef __OBJC__
 @class Protocol;

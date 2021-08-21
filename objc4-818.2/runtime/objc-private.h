@@ -110,7 +110,8 @@ public:
     Class getDecodedClass(bool authenticated);
 };
 
-
+// OC对象结构
+// 方法实现见objc-object.h
 struct objc_object {
 private:
     isa_t isa;

@@ -1684,8 +1684,9 @@ public:
     }
 };
 
-
+// OC类结构
 struct objc_class : objc_object {
+    // 禁用默认构造函数
   objc_class(const objc_class&) = delete;
   objc_class(objc_class&&) = delete;
   void operator=(const objc_class&) = delete;
