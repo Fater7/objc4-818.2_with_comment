@@ -33,6 +33,10 @@
 #include <objc/objc-api.h>
 #include <stdbool.h>
 
+// ----------------------------------------------------------
+// OBJC_TYPES_DEFINED在objc-private.h中定义为1，该部分代码无效。
+// objc_object的最新定义见objc-private.h。
+
 #if !OBJC_TYPES_DEFINED
 /// An opaque type that represents an Objective-C class.
 typedef struct objc_class *Class;
@@ -45,6 +49,8 @@ struct objc_object {
 /// A pointer to an instance of a class.
 typedef struct objc_object *id;
 #endif
+
+// ----------------------------------------------------------
 
 /// An opaque type that represents a method selector.
 typedef struct objc_selector *SEL;

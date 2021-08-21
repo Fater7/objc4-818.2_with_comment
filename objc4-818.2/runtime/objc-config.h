@@ -79,19 +79,16 @@
 #   define SUPPORT_MSB_TAGGED_POINTERS 1
 #endif
 
-/**
- * <F7>
- * https://www.yotrolz.com/posts/30dfa6fa/
- * __ARM_ARCH_7K__：clang中定义，目前若平台为iWatch则有__ARM_ARCH_7K__ = 2
- * __LP64__：指针使用64位存储
- */
+// https://www.yotrolz.com/posts/30dfa6fa/
+// __ARM_ARCH_7K__：clang中定义，目前若平台为iWatch则有__ARM_ARCH_7K__ = 2
+// __LP64__：指针使用64位存储
 
 // Define SUPPORT_INDEXED_ISA=1 on platforms that store the class in the isa 
 // field as an index into a class table.
 // Note, keep this in sync with any .s files which also define it.
 // Be sure to edit objc-abi.h as well.
 
-// <F7> SUPPORT_INDEXED_ISA用于watchOS
+// SUPPORT_INDEXED_ISA用于watchOS
 
 #if __ARM_ARCH_7K__ >= 2  ||  (__arm64__ && !__LP64__)
 #   define SUPPORT_INDEXED_ISA 1
@@ -102,7 +99,7 @@
 // Define SUPPORT_PACKED_ISA=1 on platforms that store the class in the isa 
 // field as a maskable pointer with other data around it.
 
-// <F7> SUPPORT_PACKED_ISA用于iOS
+// SUPPORT_PACKED_ISA用于iOS
 
 #if (!__LP64__  ||  TARGET_OS_WIN32  ||  \
      (TARGET_OS_SIMULATOR && !TARGET_OS_MACCATALYST && !__arm64__))

@@ -75,7 +75,6 @@ namespace {
     struct SideTable;
 };
 
-// <F7> isa.h包含了isa所需的结构宏定义
 #include "isa.h"
 
 union isa_t {
@@ -93,6 +92,7 @@ private:
 public:
 #if defined(ISA_BITFIELD)
     struct {
+        // 针对不同平台定义不同的结构含义
         ISA_BITFIELD;  // defined in isa.h
     };
 

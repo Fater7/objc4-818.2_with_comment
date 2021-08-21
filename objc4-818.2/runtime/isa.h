@@ -57,7 +57,7 @@
 # if __arm64__
 // ARM64 simulators have a larger address space, so use the ARM64e
 // scheme even when simulators build for ARM64-not-e.
-#   if __has_feature(ptrauth_calls) || TARGET_OS_SIMULATOR
+#   if __has_feature(ptrauth_calls) || TARGET_OS_SIMULATOR // ARM64模拟器
 #     define ISA_MASK        0x007ffffffffffff8ULL
 #     define ISA_MAGIC_MASK  0x0000000000000001ULL
 #     define ISA_MAGIC_VALUE 0x0000000000000001ULL
@@ -71,7 +71,7 @@
         uintptr_t extra_rc          : 8
 #     define RC_ONE   (1ULL<<56)
 #     define RC_HALF  (1ULL<<7)
-#   else
+#   else  // iOS真机
 #     define ISA_MASK        0x0000000ffffffff8ULL
 #     define ISA_MAGIC_MASK  0x000003f000000001ULL
 #     define ISA_MAGIC_VALUE 0x000001a000000001ULL
