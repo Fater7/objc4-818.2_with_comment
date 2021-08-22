@@ -123,6 +123,7 @@
 //   _tryRetain/_isDeallocating/retainWeakReference/allowsWeakReference
 #define FAST_HAS_DEFAULT_RR     (1UL<<2)
 // data pointer
+// 3-46位，共44位
 #define FAST_DATA_MASK          0x00007ffffffffff8UL
 
 #if __arm64__
@@ -1455,6 +1456,8 @@ struct class_rw_ext_t {
     uint32_t version;
 };
 
+// objc_class -> class_data_bits_t -> class_rw_t
+// 存储类属性方法信息
 struct class_rw_t {
     // Be warned that Symbolication knows the layout of this structure.
     uint32_t flags;
@@ -1462,13 +1465,13 @@ struct class_rw_t {
 #if SUPPORT_INDEXED_ISA
     uint16_t index;
 #endif
-
     explicit_atomic<uintptr_t> ro_or_rw_ext;
 
     Class firstSubclass;
     Class nextSiblingClass;
 
 private:
+    // 像是一个处理ro_or_rw_ext的工具类
     using ro_or_rw_ext_t = objc::PointerUnion<const class_ro_t, class_rw_ext_t, PTRAUTH_STR("class_ro_t"), PTRAUTH_STR("class_rw_ext_t")>;
 
     const ro_or_rw_ext_t get_ro_or_rwe() const {
@@ -1528,6 +1531,7 @@ public:
         return extAlloc(ro, true);
     }
 
+    // 获取class_ro_t
     const class_ro_t *ro() const {
         auto v = get_ro_or_rwe();
         if (slowpath(v.is<class_rw_ext_t *>())) {
@@ -1545,6 +1549,7 @@ public:
         }
     }
 
+    // 获取方法列表
     const method_array_t methods() const {
         auto v = get_ro_or_rwe();
         if (v.is<class_rw_ext_t *>()) {
@@ -1554,6 +1559,7 @@ public:
         }
     }
 
+    // 获取属性列表
     const property_array_t properties() const {
         auto v = get_ro_or_rwe();
         if (v.is<class_rw_ext_t *>()) {
@@ -1563,6 +1569,7 @@ public:
         }
     }
 
+    // 获取协议列表
     const protocol_array_t protocols() const {
         auto v = get_ro_or_rwe();
         if (v.is<class_rw_ext_t *>()) {
@@ -1578,6 +1585,8 @@ struct class_data_bits_t {
     friend objc_class;
 
     // Values are the FAST_ flags above.
+    // 使用各宏掩码获取数据
+    // 重点包含class_rw_t的指针
     uintptr_t bits;
 private:
     bool getBit(uintptr_t bit) const
@@ -1589,6 +1598,7 @@ private:
     // set and clear must not overlap.
     void setAndClearBits(uintptr_t set, uintptr_t clear)
     {
+        // 不可有重复掩码位
         ASSERT((set & clear) == 0);
         uintptr_t newBits, oldBits = LoadExclusive(&bits);
         do {
@@ -1694,7 +1704,10 @@ struct objc_class : objc_object {
     // Class ISA;
     Class superclass;
     cache_t cache;             // formerly cache pointer and vtable
-    class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
+    
+    // class_rw_t * plus custom rr/alloc flags
+    // 持有一个uintptr_t变量，包含各flag和信息指针
+    class_data_bits_t bits;
 
     Class getSuperclass() const {
 #if __has_feature(ptrauth_calls)

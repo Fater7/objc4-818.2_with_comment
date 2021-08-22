@@ -59,10 +59,13 @@ struct PointerUnionTypeSelectorReturn<
       typename PointerUnionTypeSelector<T1, T2, RET_EQ, RET_NE>::Return;
 };
 
+// class与typename在用法上并无太大区别
+// https://liam.page/2018/03/16/keywords-typename-and-class-in-Cxx/
 template <class T1, class T2, typename Auth1, typename Auth2>
 class PointerUnion {
     uintptr_t _value;
 
+    // 静态断言，强制类型2位以上对齐
     static_assert(alignof(T1) >= 2, "alignment requirement");
     static_assert(alignof(T2) >= 2, "alignment requirement");
 
