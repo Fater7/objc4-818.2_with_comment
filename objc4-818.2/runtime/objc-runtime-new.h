@@ -610,6 +610,7 @@ struct entsize_list_tt {
     uint32_t entsizeAndFlags;
     uint32_t count;
 
+    // 一个元素的大小
     uint32_t entsize() const {
         return entsizeAndFlags & ~FlagMask;
     }
@@ -629,7 +630,8 @@ struct entsize_list_tt {
     size_t byteSize() const {
         return byteSize(entsize(), count);
     }
-    
+
+    // 数据总字节数
     static size_t byteSize(uint32_t entsize, uint32_t count) {
         return sizeof(entsize_list_tt) + count*entsize;
     }
