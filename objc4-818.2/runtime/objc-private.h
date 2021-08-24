@@ -246,6 +246,7 @@ private:
 typedef struct method_t *Method;
 typedef struct ivar_t *Ivar;
 typedef struct category_t *Category;
+// 属性结构
 typedef struct property_t *objc_property_t;
 #else
 typedef struct old_method *Method;

@@ -883,6 +883,8 @@ struct ivar_t {
     }
 };
 
+// 属性结构
+// 每一个属性是一个property_t的指针
 struct property_t {
     const char *name;
     const char *attributes;
