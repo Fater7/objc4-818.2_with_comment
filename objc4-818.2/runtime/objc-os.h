@@ -55,6 +55,7 @@ static inline size_t align16(size_t x) {
 }
 
 // Mix-in for classes that must not be copied.
+// 禁用了拷贝构造函数与析构函数
 class nocopy_t {
   private:
     nocopy_t(const nocopy_t&) = delete;

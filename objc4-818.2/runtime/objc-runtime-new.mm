@@ -248,6 +248,7 @@ static IMP method_t_remappedImp_nolock(const method_t *m) {
 IMP method_t::remappedImp(bool needsLock) const {
     ASSERT(isSmall());
     if (needsLock) {
+        // guard的实现？
         mutex_locker_t guard(runtimeLock);
         return method_t_remappedImp_nolock(this);
     } else {
@@ -259,10 +260,13 @@ void method_t::remapImp(IMP imp) {
     ASSERT(isSmall());
     runtimeLock.assertLocked();
     auto *map = objc::smallMethodIMPMap.get(true);
+    // small结构，IMP存在统一的表中
+    // 表为懒加载DenseMap衍生结构，LLVM中定义
     (*map)[this] = imp;
 }
 
 objc_method_description *method_t::getSmallDescription() const {
+    // 单独一个表存方法描述映射
     static objc::LazyInitDenseMap<const method_t *, objc_method_description *> map;
 
     mutex_locker_t guard(runtimeLock);

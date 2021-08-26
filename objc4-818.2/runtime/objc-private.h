@@ -243,9 +243,16 @@ private:
 
 
 #if __OBJC2__
+
+// 方法结构
 typedef struct method_t *Method;
+
+// 变量结构
 typedef struct ivar_t *Ivar;
+
+// 类别结构
 typedef struct category_t *Category;
+
 // 属性结构
 typedef struct property_t *objc_property_t;
 #else

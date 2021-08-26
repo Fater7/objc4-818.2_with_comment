@@ -9,4 +9,12 @@
 
 @implementation Person
 
+- (void)configName {
+
+}
+
+- (void)configName:(NSString *)name {
+    
+}
+
 @end

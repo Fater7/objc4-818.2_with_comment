@@ -563,6 +563,8 @@ typedef struct classref * classref_t;
 * and adding the offset stored within it. This is a 32-bit signed
 * offset giving ±2GB of range.
 **********************************************************************/
+// offset = 5
+// get() = (T)(&offset + 5)
 template <typename T>
 struct RelativePointer: nocopy_t {
     int32_t offset;
@@ -605,6 +607,8 @@ struct PointerModifierNop {
 * PointerModifier is applied to the element pointers retrieved from
 * the array.
 **********************************************************************/
+
+// class_ro_t中类各信息结构的父结构
 template <typename Element, typename List, uint32_t FlagMask, typename PointerModifier = PointerModifierNop>
 struct entsize_list_tt {
     uint32_t entsizeAndFlags;
@@ -619,6 +623,8 @@ struct entsize_list_tt {
     }
 
     // 取第i个元素
+    // 元素默认在内存中紧跟着数据排列？
+    // 只有读方法，元素如何写进来的？
     Element& getOrEnd(uint32_t i) const { 
         ASSERT(i <= count);
         return *PointerModifier::modify(*this, (Element *)((uint8_t *)this + sizeof(*this) + i*entsize()));
@@ -651,6 +657,8 @@ struct entsize_list_tt {
         return iterator(*static_cast<const List*>(this), count); 
     }
 
+    // 整个结构设计就很妖
+    // 外部结构数据填充枚举器
     struct iterator {
         uint32_t entsize;
         uint32_t index;  // keeping track of this saves a divide in operator-
@@ -727,6 +735,11 @@ namespace objc {
 static inline bool inSharedCache(uintptr_t ptr);
 }
 
+// 方法结构
+// typedef struct method_t *Method;
+// 区分了big和small
+// big是老结构
+// small是M1中新结构，在方法查找速度上有提升？
 struct method_t {
     static const uint32_t smallMethodListFlag = 0x80000000;
 
@@ -751,6 +764,7 @@ private:
     struct small {
         // The name field either refers to a selector (in the shared
         // cache) or a selref (everywhere else).
+        // shareCache下，name存的是selector的指针。
         RelativePointer<const void *> name;
         RelativePointer<const char *> types;
         RelativePointer<IMP> imp;
@@ -761,13 +775,19 @@ private:
         }
     };
 
+    // 都喜欢把成员变量的地址隐含在自身地址里
     small &small() const {
         ASSERT(isSmall());
         return *(struct small *)((uintptr_t)this & ~(uintptr_t)1);
     }
 
+    // small结构取IMP
     IMP remappedImp(bool needsLock) const;
+
+    // small结构存IMP
     void remapImp(IMP imp);
+
+    // small结构取方法描述
     objc_method_description *getSmallDescription() const;
 
 public:
@@ -842,6 +862,7 @@ public:
         }
     }
 
+    // objc_method_description只包含name和types，内存布局相同
     objc_method_description *getDescription() const {
         return isSmall() ? getSmallDescription() : (struct objc_method_description *)this;
     }
