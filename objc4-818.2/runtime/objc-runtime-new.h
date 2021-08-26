@@ -890,7 +890,13 @@ struct ivar_t {
 // 每一个属性是一个property_t的指针
 // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtPropertyIntrospection.html#//apple_ref/doc/uid/TP40008048-CH101-SW5
 struct property_t {
+    // 属性名
     const char *name;
+
+    // 记录该属性的特性
+    // @property (nonatomic, copy) NSString *some;
+    // T@"NSString",C,N,V_some
+    // Type Encodings https://nshipster.cn/type-encodings/
     const char *attributes;
 };
 
