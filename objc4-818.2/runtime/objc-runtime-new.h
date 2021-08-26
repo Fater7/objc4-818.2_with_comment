@@ -618,6 +618,7 @@ struct entsize_list_tt {
         return entsizeAndFlags & FlagMask;
     }
 
+    // 取第i个元素
     Element& getOrEnd(uint32_t i) const { 
         ASSERT(i <= count);
         return *PointerModifier::modify(*this, (Element *)((uint8_t *)this + sizeof(*this) + i*entsize()));
@@ -887,6 +888,7 @@ struct ivar_t {
 
 // 属性结构
 // 每一个属性是一个property_t的指针
+// https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtPropertyIntrospection.html#//apple_ref/doc/uid/TP40008048-CH101-SW5
 struct property_t {
     const char *name;
     const char *attributes;
