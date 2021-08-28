@@ -749,8 +749,13 @@ struct method_t {
     // representation of three pointers storing the selector, types
     // and implementation.
     struct big {
+        // typedef struct objc_selector *SEL;
         SEL name;
+        
+        // Type Encoding
         const char *types;
+        
+        // typedef void (*IMP)(void /* id, SEL, ... */ );
         MethodListIMP imp;
     };
 
@@ -885,6 +890,7 @@ public:
     }
 };
 
+// 变量结构
 struct ivar_t {
 #if __x86_64__
     // *offset was originally 64-bit on some x86_64 platforms.
@@ -990,6 +996,8 @@ typedef uintptr_t protocol_ref_t;  // protocol_t *, but unremapped
 
 struct protocol_t : objc_object {
     const char *mangledName;
+    
+    // 父协议，数组支持swift多继承
     struct protocol_list_t *protocols;
     method_list_t *instanceMethods;
     method_list_t *classMethods;
@@ -1041,6 +1049,9 @@ struct protocol_t : objc_object {
 struct protocol_list_t {
     // count is pointer-sized by accident.
     uintptr_t count;
+    
+    // typedef uintptr_t protocol_ref_t;
+    // remapProtocol函数从ref中获取实际protocol_t
     protocol_ref_t list[0]; // variable-size
 
     size_t byteSize() const {
@@ -1068,6 +1079,7 @@ struct protocol_list_t {
     }
 };
 
+// 存储本类数据
 struct class_ro_t {
     uint32_t flags;
     uint32_t instanceStart;
@@ -1222,6 +1234,9 @@ struct class_ro_t {
 * countLists/beginLists/endLists iterate the metadata lists
 * count/begin/end iterate the underlying metadata elements
 **********************************************************************/
+
+// class_rw_t中类各信息结构的父结构
+// 运行时可动态修改
 template <typename Element, typename List, template<typename> class Ptr>
 class list_array_tt {
     struct array_t {
@@ -2237,7 +2252,7 @@ struct swift_class_t : objc_class {
     }
 };
 
-
+// 类别结构
 struct category_t {
     const char *name;
     classref_t cls;
