@@ -1210,6 +1210,7 @@ public:
                (flags & ATTACH_METACLASS) ||
                (flags & ATTACH_CLASS_AND_METACLASS));
 
+        // 这里存储了类到类别的映射？
         auto &map = get();
         auto it = map.find(previously);
 
@@ -1381,6 +1382,7 @@ class_rw_t::extAlloc(const class_ro_t *ro, bool deepCopy)
 // Attach method lists and properties and protocols from categories to a class.
 // Assumes the categories in cats are all loaded and sorted by load order, 
 // oldest categories first.
+// 将类别中的信息存至类中
 static void
 attachCategories(Class cls, const locstamped_category_t *cats_list, uint32_t cats_count,
                  int flags)
@@ -1404,6 +1406,7 @@ attachCategories(Class cls, const locstamped_category_t *cats_list, uint32_t cat
      * and call attachLists on the chunks. attachLists prepends the
      * lists, so the final result is in the expected order.
      */
+    // 循环使用固定大小的内存来转移信息
     constexpr uint32_t ATTACH_BUFSIZ = 64;
     method_list_t   *mlists[ATTACH_BUFSIZ];
     property_list_t *proplists[ATTACH_BUFSIZ];
@@ -1421,11 +1424,15 @@ attachCategories(Class cls, const locstamped_category_t *cats_list, uint32_t cat
 
         method_list_t *mlist = entry.cat->methodsForMeta(isMeta);
         if (mlist) {
+            // 临时空间满时再存到本类中
+            // 一个类别只会多一个list，不存在超过阈值并判断不到的情况
             if (mcount == ATTACH_BUFSIZ) {
                 prepareMethodLists(cls, mlists, mcount, NO, fromBundle, __func__);
                 rwe->methods.attachLists(mlists, mcount);
                 mcount = 0;
             }
+            
+            // 在多个类别间，也是后加载的类别信息在前面
             mlists[ATTACH_BUFSIZ - ++mcount] = mlist;
             fromBundle |= entry.hi->isBundle();
         }
@@ -1491,6 +1498,7 @@ static void methodizeClass(Class cls, Class previously)
     }
 
     // Install methods and properties that the class implements itself.
+    // ro中的信息移到rw
     method_list_t *list = ro->baseMethods();
     if (list) {
         prepareMethodLists(cls, &list, 1, YES, isBundleClass(cls), nullptr);
@@ -1511,10 +1519,12 @@ static void methodizeClass(Class cls, Class previously)
     // them already. These apply before category replacements.
     if (cls->isRootMetaclass()) {
         // root metaclass
+        // 为根元类添加initialize方法
         addMethod(cls, @selector(initialize), (IMP)&objc_noop_imp, "", NO);
     }
 
     // Attach categories.
+    // 类别信息添加到本类
     if (previously) {
         if (isMeta) {
             objc::unattachedCategories.attachToClass(cls, previously,
@@ -2607,6 +2617,7 @@ static void validateAlreadyRealizedClass(Class cls) {
 * Returns the real class structure for the class. 
 * Locking: runtimeLock must be write-locked by the caller
 **********************************************************************/
+// 初始化类信息
 static Class realizeClassWithoutSwift(Class cls, Class previously)
 {
     runtimeLock.assertLocked();
@@ -2743,6 +2754,7 @@ static Class realizeClassWithoutSwift(Class cls, Class previously)
     }
 
     // Attach categories
+    // 整合类的信息结构
     methodizeClass(cls, previously);
 
     return cls;

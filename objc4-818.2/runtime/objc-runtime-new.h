@@ -1302,6 +1302,7 @@ class list_array_tt {
         uintptr_t arrayAndFlag;
     };
 
+    // 经典一块地址省着用
     bool hasArray() const {
         return arrayAndFlag & 1;
     }
@@ -1310,6 +1311,7 @@ class list_array_tt {
         return (array_t *)(arrayAndFlag & ~1);
     }
 
+    // 置array信息的同时改变flag
     void setArray(array_t *array) {
         arrayAndFlag = (uintptr_t)array | 1;
     }
@@ -1387,6 +1389,7 @@ class list_array_tt {
         }
     }
 
+    // 为array添加额外的list表
     void attachLists(List* const * addedLists, uint32_t addedCount) {
         if (addedCount == 0) return;
 
@@ -1396,8 +1399,9 @@ class list_array_tt {
             uint32_t newCount = oldCount + addedCount;
             array_t *newArray = (array_t *)malloc(array_t::byteSize(newCount));
             newArray->count = newCount;
+            // 这句是多余的吧，旧信息之后就替换了
             array()->count = newCount;
-
+            // 后添加的list置于前面位置
             for (int i = oldCount - 1; i >= 0; i--)
                 newArray->lists[i + addedCount] = array()->lists[i];
             for (unsigned i = 0; i < addedCount; i++)
@@ -1408,6 +1412,8 @@ class list_array_tt {
         }
         else if (!list  &&  addedCount == 1) {
             // 0 lists -> 1 list
+            // 第一次添加list，指向该list
+            // 有多个list时，list指针就会变为array结构存储多个list
             list = addedLists[0];
             validate();
         } 
@@ -1416,9 +1422,13 @@ class list_array_tt {
             Ptr<List> oldList = list;
             uint32_t oldCount = oldList ? 1 : 0;
             uint32_t newCount = oldCount + addedCount;
+            // 申请新的内存空间到自身list
             setArray((array_t *)malloc(array_t::byteSize(newCount)));
             array()->count = newCount;
+            // 已持有list保存到最后位置
             if (oldList) array()->lists[addedCount] = oldList;
+            // 新list放前面
+            // 所以类别方法会覆盖本类方法
             for (unsigned i = 0; i < addedCount; i++)
                 array()->lists[i] = addedLists[i];
             validate();
@@ -1681,6 +1691,7 @@ public:
     // Get the class's ro data, even in the presence of concurrent realization.
     // fixme this isn't really safe without a compiler barrier at least
     // and probably a memory barrier when realizeClass changes the data field
+    // 在realizeClassWithoutSwift中，为类添加class_rw_t结构，ro_t移至rw_t中
     const class_ro_t *safe_ro() const {
         class_rw_t *maybe_rw = data();
         if (maybe_rw->flags & RW_REALIZED) {
@@ -2119,6 +2130,7 @@ struct objc_class : objc_object {
         return data()->flags & RW_FUTURE;
     }
 
+    // 是否为元类
     bool isMetaClass() const {
         ASSERT_THIS_NOT_NULL;
         ASSERT(isRealized());
@@ -2144,9 +2156,12 @@ struct objc_class : objc_object {
         else return this->ISA();
     }
 
+    // 是否为根类
     bool isRootClass() {
         return getSuperclass() == nil;
     }
+    
+    // 是否为根元类
     bool isRootMetaclass() {
         return ISA() == (Class)this;
     }
