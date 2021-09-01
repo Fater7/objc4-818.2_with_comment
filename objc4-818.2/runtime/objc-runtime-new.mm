@@ -1187,6 +1187,7 @@ public:
 class UnattachedCategories : public ExplicitInitDenseMap<Class, category_list>
 {
 public:
+    // 存根类添加分类信息
     void addForClass(locstamped_category_t lc, Class cls)
     {
         runtimeLock.assertLocked();
@@ -1524,7 +1525,7 @@ static void methodizeClass(Class cls, Class previously)
     }
 
     // Attach categories.
-    // 类别信息添加到本类
+    // 分类信息添加到本类
     if (previously) {
         if (isMeta) {
             objc::unattachedCategories.attachToClass(cls, previously,
@@ -1856,6 +1857,7 @@ static bool haveFutureNamedClasses() {
 * Installs cls as the class structure to use for the named class if it appears.
 * Locking: runtimeLock must be held by the caller
 **********************************************************************/
+// 生成一个FutureClass，存至全局哈希表
 static void addFutureNamedClass(const char *name, Class cls)
 {
     void *old;
@@ -1873,6 +1875,7 @@ static void addFutureNamedClass(const char *name, Class cls)
     cls->setData(rw);
     cls->data()->flags = RO_FUTURE;
 
+    // 类名与类空间地址存至全局表中
     old = NXMapKeyCopyingInsert(futureNamedClasses(), name, cls);
     ASSERT(!old);
 }
@@ -1885,6 +1888,7 @@ static void addFutureNamedClass(const char *name, Class cls)
 * Returns nil if the name is not used by a future class.
 * Locking: runtimeLock must be held by the caller
 **********************************************************************/
+// 获取一个FutureClass
 static Class popFutureNamedClass(const char *name)
 {
     runtimeLock.assertLocked();
@@ -1909,6 +1913,10 @@ static Class popFutureNamedClass(const char *name)
 * Returns the oldClass => nil map for ignored weak-linked classes.
 * Locking: runtimeLock must be read- or write-locked by the caller
 **********************************************************************/
+// 存：static void addRemappedClass(Class oldcls, Class newcls)
+// 取：static Class remapClass(Class cls)，
+// 取：static void remapClassRef(Class *clsref)
+// 主要存储原类到Future类空间的映射
 static objc::DenseMap<Class, Class> *remappedClasses(bool create)
 {
     static objc::LazyInitDenseMap<Class, Class> remapped_class_map;
@@ -1976,6 +1984,7 @@ static void addRemappedClass(Class oldcls, Class newcls)
 * Returns nil if cls is ignored because of weak linking.
 * Locking: runtimeLock must be read- or write-locked by the caller
 **********************************************************************/
+// 不存在时返回本身
 static Class remapClass(Class cls)
 {
     runtimeLock.assertLocked();
@@ -2360,6 +2369,7 @@ static void removeSubclass(Class supercls, Class subcls)
 * Returns the protocol name => protocol map for protocols.
 * Locking: runtimeLock must read- or write-locked by the caller
 **********************************************************************/
+// 全局协议表
 static NXMapTable *protocols(void)
 {
     static NXMapTable *protocol_map = nil;
@@ -2676,6 +2686,7 @@ static Class realizeClassWithoutSwift(Class cls, Class previously)
     //   or that Swift's initializers have already been called.
     //   fixme that assumption will be wrong if we add support
     //   for ObjC subclasses of Swift classes.
+    // 整合分类与本类信息
     supercls = realizeClassWithoutSwift(remapClass(cls->getSuperclass()), nil);
     metacls = realizeClassWithoutSwift(remapClass(cls->ISA()), nil);
 
@@ -2937,9 +2948,11 @@ missingWeakSuperclass(Class cls)
 
     if (!cls->getSuperclass()) {
         // superclass nil. This is normal for root classes only.
+        // 非根类，但没有父类
         return (!(cls->data()->flags & RO_ROOT));
     } else {
         // superclass not nil. Check if a higher superclass is missing.
+        // 递归查找父类是不是无父类
         Class supercls = remapClass(cls->getSuperclass());
         ASSERT(cls != cls->getSuperclass());
         ASSERT(cls != supercls);
@@ -3032,6 +3045,8 @@ Class _objc_allocateFutureClass(const char *name)
 * does get loaded.
 * Not thread safe. 
 **********************************************************************/
+// 构建一个FutureClass的入口
+// OC的一些基础结构类为FutureClass
 Class objc_getFutureClass(const char *name)
 {
     Class cls;
@@ -3051,6 +3066,7 @@ Class objc_getFutureClass(const char *name)
     // No class or future class with that name yet. Make one.
     // fixme not thread-safe with respect to 
     // simultaneous library load or getFutureClass.
+    // 全局哈希表中查找
     return _objc_allocateFutureClass(name);
 }
 
@@ -3150,6 +3166,8 @@ static void load_categories_nolock(header_info *hi) {
             Class cls = remapClass(cat->cls);
             locstamped_category_t lc{cat, hi};
 
+            // 分类的本类不存在
+            // 这里的weak-linked指什么？
             if (!cls) {
                 // Category's target class is missing (probably weak-linked).
                 // Ignore the category.
@@ -3176,6 +3194,7 @@ static void load_categories_nolock(header_info *hi) {
                     cat->protocols ||
                     (hasClassProperties && cat->_classProperties))
                 {
+                    // 存根类添加类别信息
                     objc::unattachedCategories.addForClass(lc, cls);
                 }
             } else {
@@ -3186,6 +3205,7 @@ static void load_categories_nolock(header_info *hi) {
                     ||  cat->instanceProperties)
                 {
                     if (cls->isRealized()) {
+                        // 分类信息加给本类
                         attachCategories(cls, &lc, 1, ATTACH_EXISTING);
                     } else {
                         objc::unattachedCategories.addForClass(lc, cls);
@@ -3196,6 +3216,7 @@ static void load_categories_nolock(header_info *hi) {
                     ||  (hasClassProperties && cat->_classProperties))
                 {
                     if (cls->ISA()->isRealized()) {
+                        // 类方法与属性加给元类
                         attachCategories(cls->ISA(), &lc, 1, ATTACH_EXISTING | ATTACH_METACLASS);
                     } else {
                         objc::unattachedCategories.addForClass(lc, cls->ISA());
@@ -3212,6 +3233,7 @@ static void load_categories_nolock(header_info *hi) {
 static void loadAllCategories() {
     mutex_locker_t lock(runtimeLock);
 
+    // 遍历map_images时存的镜像信息
     for (auto *hi = FirstHeader; hi != NULL; hi = hi->getNext()) {
         load_categories_nolock(hi);
     }
@@ -3226,26 +3248,34 @@ static void loadAllCategories() {
 extern bool hasLoadMethods(const headerType *mhdr);
 extern void prepare_load_methods(const headerType *mhdr);
 
+// 调用所有+load方法
 void
 load_images(const char *path __unused, const struct mach_header *mh)
 {
+    // 处理所有分类
+    // load_images会执行多次，这里保证分类加载只执行一次
     if (!didInitialAttachCategories && didCallDyldNotifyRegister) {
         didInitialAttachCategories = true;
         loadAllCategories();
     }
 
     // Return without taking locks if there are no +load methods here.
-    if (!hasLoadMethods((const headerType *)mh)) return;
+    // 镜像不包含+load方法，则直接返回。
+    if (!hasLoadMethods((const headerType *)mh)) {
+        return;
+    }
 
     recursive_mutex_locker_t lock(loadMethodLock);
 
     // Discover load methods
     {
         mutex_locker_t lock2(runtimeLock);
+        // 记录本类与分类load方法
         prepare_load_methods((const headerType *)mh);
     }
 
     // Call +load methods (without runtimeLock - re-entrant)
+    // 调用load方法
     call_load_methods();
 }
 
@@ -3338,10 +3368,12 @@ bool mustReadClasses(header_info *hi, bool hasDyldRoots)
 *
 * Locking: runtimeLock acquired by map_images or objc_readClassPair
 **********************************************************************/
+// 使用提前申请过的Future类内存空间来存储类信息
 Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
 {
     const char *mangledName = cls->nonlazyMangledName();
-    
+
+    // 自身或继承链上存在非根类但无父类的类
     if (missingWeakSuperclass(cls)) {
         // No superclass (probably weak-linked). 
         // Disavow any knowledge of this subclass.
@@ -3359,11 +3391,12 @@ Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
 
     Class replacing = nil;
     if (mangledName != nullptr) {
+        // 绝大部分情况下，没有future类
         if (Class newCls = popFutureNamedClass(mangledName)) {
             // This name was previously allocated as a future class.
             // Copy objc_class to future class's struct.
             // Preserve future's rw data block.
-
+            // 有Future类，在这里使用提前分配好的内存空间
             if (newCls->isAnySwift()) {
                 _objc_fatal("Can't complete future class request for '%s' "
                             "because the real class is too big.",
@@ -3379,6 +3412,7 @@ Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
             newCls->setSuperclass(cls->getSuperclass());
             newCls->initIsa(cls->getIsa());
 
+            // rw使用Future的，ro使用原本的
             rw->set_ro((class_ro_t *)newCls->data());
             newCls->setData(rw);
             freeIfMutable((char *)old_ro->getName());
@@ -3390,14 +3424,16 @@ Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
             cls = newCls;
         }
     }
-    
+
     if (headerIsPreoptimized  &&  !replacing) {
         // class list built in shared cache
         // fixme strict assert doesn't work because of duplicates
         // ASSERT(cls == getClass(name));
         ASSERT(mangledName == nullptr || getClassExceptSomeSwift(mangledName));
     } else {
-        if (mangledName) { //some Swift generic classes can lazily generate their names
+        if (mangledName) {
+            //some Swift generic classes can lazily generate their names
+            // 存类名到类的映射
             addNamedClass(cls, mangledName, replacing);
         } else {
             Class meta = cls->ISA();
@@ -3405,6 +3441,8 @@ Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
             ASSERT(metaRO->getNonMetaclass() && "Metaclass with lazy name must have a pointer to the corresponding nonmetaclass.");
             ASSERT(metaRO->getNonMetaclass() == cls && "Metaclass nonmetaclass pointer must equal the original class.");
         }
+
+        // 全部类存表
         addClassTableEntry(cls);
     }
 
@@ -3514,6 +3552,7 @@ readProtocol(protocol_t *newproto, Class protocol_class,
 *
 * Locking: runtimeLock acquired by map_images
 **********************************************************************/
+// 读取镜像中的OC结构信息，存入全局表中
 void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int unoptimizedTotalClasses)
 {
     header_info *hi;
@@ -3616,10 +3655,13 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
             if (hi->hasPreoptimizedSelectors()) continue;
 
             bool isBundle = hi->isBundle();
+
+            //获取镜像中SEL信息
             SEL *sels = _getObjc2SelectorRefs(hi, &count);
             UnfixedSelectors += count;
             for (i = 0; i < count; i++) {
                 const char *name = sel_cname(sels[i]);
+                // 注册SEL
                 SEL sel = sel_registerNameNoLock(name, isBundle);
                 if (sels[i] != sel) {
                     sels[i] = sel;
@@ -3639,13 +3681,18 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
             continue;
         }
 
+        // 获取镜像中的类表
         classref_t const *classlist = _getObjc2ClassList(hi, &count);
 
         bool headerIsBundle = hi->isBundle();
+
+        // 大部分情况下 headerIsPreoptimized 为false
         bool headerIsPreoptimized = hi->hasPreoptimizedClasses();
 
         for (i = 0; i < count; i++) {
             Class cls = (Class)classlist[i];
+            // 将类信息存至全局表中
+            // 如果有使用Future类空间存原类信息，替换并记录映射
             Class newCls = readClass(cls, headerIsBundle, headerIsPreoptimized);
 
             if (newCls != cls  &&  newCls) {
@@ -3665,7 +3712,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
     // Fix up remapped classes
     // Class list and nonlazy class list remain unremapped.
     // Class refs and super refs are remapped for message dispatching.
-    
+    // 存在有重映射的类，更新镜像中的ClassRef
     if (!noClassesRemapped()) {
         for (EACH_HEADER) {
             Class *classrefs = _getObjc2ClassRefs(hi, &count);
@@ -3684,6 +3731,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
 #if SUPPORT_FIXUP
     // Fix up old objc_msgSend_fixup call sites
+    // hook一些NSObject的基础方法
     for (EACH_HEADER) {
         message_ref_t *refs = _getObjc2MessageRefs(hi, &count);
         if (count == 0) continue;
@@ -3702,6 +3750,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
 
     // Discover protocols. Fix up protocol refs.
+    // 镜像中的协议存表
     for (EACH_HEADER) {
         extern objc_class OBJC_CLASS_$_Protocol;
         Class cls = (Class)&OBJC_CLASS_$_Protocol;
@@ -3737,6 +3786,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
     // Fix up @protocol references
     // Preoptimized images may have the right 
     // answer already but we don't know for sure.
+    // 和Class一样，一些协议引用需要重新映射
     for (EACH_HEADER) {
         // At launch time, we know preoptimized image refs are pointing at the
         // shared cache definition of a protocol.  We can skip the check on
@@ -3756,6 +3806,10 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
     // attachment has been done. For categories present at startup,
     // discovery is deferred until the first load_images call after
     // the call to _dyld_objc_notify_register completes. rdar://problem/53119145
+
+    // load_images中didInitialAttachCategories置为true
+    // 但是load_images会比map_images晚执行，这里并不会走到
+    // 真正处理分类的入口还是在load_images里
     if (didInitialAttachCategories) {
         for (EACH_HEADER) {
             load_categories_nolock(hi);
@@ -3789,6 +3843,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
                 // We can't disallow all Swift classes because of
                 // classes like Swift.__EmptyArrayStorage
             }
+            // 整理类信息
             realizeClassWithoutSwift(cls, nil);
         }
     }
@@ -3885,6 +3940,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 **********************************************************************/
 // Recursively schedule +load for cls and any un-+load-ed superclasses.
 // cls must already be connected.
+// 递归将类load方法存表
 static void schedule_class_load(Class cls)
 {
     if (!cls) return;
@@ -3893,6 +3949,7 @@ static void schedule_class_load(Class cls)
     if (cls->data()->flags & RW_LOADED) return;
 
     // Ensure superclass-first ordering
+    // 父类先于子类存储+load方法
     schedule_class_load(cls->getSuperclass());
 
     add_class_to_loadable_list(cls);
@@ -3903,6 +3960,9 @@ static void schedule_class_load(Class cls)
 bool hasLoadMethods(const headerType *mhdr)
 {
     size_t count;
+    // 有+load方法的类和分类都在这个section？
+    // __objc_nlclslist
+    // __objc_nlcatlist
     if (_getObjc2NonlazyClassList(mhdr, &count)  &&  count > 0) return true;
     if (_getObjc2NonlazyCategoryList(mhdr, &count)  &&  count > 0) return true;
     return false;
@@ -3914,12 +3974,14 @@ void prepare_load_methods(const headerType *mhdr)
 
     runtimeLock.assertLocked();
 
+    // 记录本类的load方法
     classref_t const *classlist = 
         _getObjc2NonlazyClassList(mhdr, &count);
     for (i = 0; i < count; i++) {
         schedule_class_load(remapClass(classlist[i]));
     }
 
+    // 记录分类的load方法
     category_t * const *categorylist = _getObjc2NonlazyCategoryList(mhdr, &count);
     for (i = 0; i < count; i++) {
         category_t *cat = categorylist[i];
@@ -3929,6 +3991,7 @@ void prepare_load_methods(const headerType *mhdr)
             _objc_fatal("Swift class extensions and categories on Swift "
                         "classes are not allowed to have +load methods");
         }
+        // 防止本类没有包含分类信息，再走一次realize
         realizeClassWithoutSwift(cls, nil);
         ASSERT(cls->ISA()->isRealized());
         add_category_to_loadable_list(cat);
@@ -5377,6 +5440,7 @@ class_copyPropertyList(Class cls, unsigned int *outCount)
 * Called only from add_class_to_loadable_list.
 * Locking: runtimeLock must be read- or write-locked by the caller.
 **********************************************************************/
+// 获取本类的load方法
 IMP 
 objc_class::getLoadMethod()
 {
@@ -5452,6 +5516,7 @@ _category_getClass(Category cat)
 * Called only from add_category_to_loadable_list
 * Locking: runtimeLock must be read- or write-locked by the caller
 **********************************************************************/
+// 获取分类load方法
 IMP 
 _category_getLoadMethod(Category cat)
 {

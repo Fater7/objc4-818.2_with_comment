@@ -346,7 +346,7 @@ Protocol *getSharedCachePreoptimizedProtocol(const char *name)
     });
 }
 
-
+// 获取镜像预存的协议信息？
 Protocol *getPreoptimizedProtocol(const char *name)
 {
     objc_protocolopt2_t *protocols = opt ? opt->protocolopt2() : nil;

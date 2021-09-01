@@ -241,6 +241,24 @@ void _objc_inform(const char *fmt, ...)
     free(buf1);
 }
 
+// 自用log函数
+void FLog(const char *fmt, ...)
+{
+    va_list ap;
+    char *buf1;
+    char *buf2;
+
+    va_start (ap,fmt);
+    vasprintf(&buf1, fmt, ap);
+    va_end (ap);
+
+    asprintf(&buf2, "[Fater]: %s\n", buf1);
+    _objc_syslog(buf2);
+
+    free(buf2);
+    free(buf1);
+}
+
 
 /* 
  * Like _objc_inform(), but prints the message only in any 

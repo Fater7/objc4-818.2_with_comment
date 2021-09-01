@@ -45,7 +45,9 @@ struct loadable_category {
 // List of classes that need +load called (pending superclass +load)
 // This list always has superclasses first because of the way it is constructed
 static struct loadable_class *loadable_classes = nil;
+// 有+load方法的本类数量
 static int loadable_classes_used = 0;
+// 有+load方法的分类数量
 static int loadable_classes_allocated = 0;
 
 // List of categories that need +load called (pending parent class +load)
@@ -59,6 +61,7 @@ static int loadable_categories_allocated = 0;
 * Class cls has just become connected. Schedule it for +load if
 * it implements a +load method.
 **********************************************************************/
+// 存储本类到load方法的映射
 void add_class_to_loadable_list(Class cls)
 {
     IMP method;
@@ -72,7 +75,8 @@ void add_class_to_loadable_list(Class cls)
         _objc_inform("LOAD: class '%s' scheduled for +load", 
                      cls->nameForLogging());
     }
-    
+
+    // 映射表存满时扩容
     if (loadable_classes_used == loadable_classes_allocated) {
         loadable_classes_allocated = loadable_classes_allocated*2 + 16;
         loadable_classes = (struct loadable_class *)
@@ -93,6 +97,7 @@ void add_class_to_loadable_list(Class cls)
 * to its class. Schedule this category for +load after its parent class
 * becomes connected and has its own +load method called.
 **********************************************************************/
+// 存储分类到load方法的映射
 void add_category_to_loadable_list(Category cat)
 {
     IMP method;
@@ -254,6 +259,7 @@ static bool call_category_loads(void)
     }
 
     // Compact detached list (order-preserving)
+    // 重新紧凑排列分类表，已为nil的分类不占位
     shift = 0;
     for (i = 0; i < used; i++) {
         if (cats[i].cat) {
@@ -265,6 +271,8 @@ static bool call_category_loads(void)
     used -= shift;
 
     // Copy any new +load candidates from the new list to the detached list.
+    // 多个镜像会有有新的分类+load存进来
+    // 新的分类方法存表
     new_categories_added = (loadable_categories_used > 0);
     for (i = 0; i < loadable_categories_used; i++) {
         if (used == allocated) {
@@ -334,6 +342,10 @@ static bool call_category_loads(void)
 * Locking: loadMethodLock must be held by the caller 
 *   All other locks must not be held.
 **********************************************************************/
+// 先调用本类+load
+// 父类顺序在子类前面
+// 再调用分类+load
+// 调用+load的时候，可能有其他镜像新的load方法存进来，因此循环调用直到全部完成。
 void call_load_methods(void)
 {
     static bool loading = NO;

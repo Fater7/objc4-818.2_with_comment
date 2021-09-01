@@ -90,7 +90,7 @@ BOOL sel_isMapped(SEL sel)
     return it != namedSelectors.get().end() && (SEL)*it == sel;
 }
 
-
+// 非WIN32可用
 static SEL search_builtins(const char *name) 
 {
 #if SUPPORT_PREOPT
@@ -110,9 +110,11 @@ static SEL __sel_registerName(const char *name, bool shouldLock, bool copy)
 
     if (!name) return (SEL)0;
 
+    // 查找dyld有没有这个SEL
     result = search_builtins(name);
     if (result) return result;
-    
+
+    // 新建SEL并存表
     conditional_mutex_locker_t lock(selLock, shouldLock);
 	auto it = namedSelectors.get().insert(name);
 	if (it.second) {

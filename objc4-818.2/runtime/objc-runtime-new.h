@@ -67,6 +67,7 @@
 // These are not emitted by the compiler and are never used in class_ro_t.
 // Their presence should be considered in future ABI versions.
 // class_t->data is class_rw_t, not class_ro_t
+// 已通过realizeClassWithoutSwift整合类信息，本类包含分类数据
 #define RW_REALIZED           (1<<31)
 // class is unresolved future class
 #define RW_FUTURE             (1<<30)
@@ -83,6 +84,8 @@
 // available for use; was RW_FINALIZE_ON_MAIN_THREAD
 // #define RW_24 (1<<24)
 // class +load has been called
+// 类的load方法已被记录到表，等待调用
+// 记录后直接就被调用了，其实也差不多能代表已被调用+load
 #define RW_LOADED             (1<<23)
 #if !SUPPORT_NONPOINTER_ISA
 // class instances may have associative references
@@ -1563,6 +1566,7 @@ public:
     // set and clear must not overlap
     void changeFlags(uint32_t set, uint32_t clear) 
     {
+        // 无重复标记位
         ASSERT((set & clear) == 0);
 
         uint32_t oldf, newf;
@@ -2020,6 +2024,7 @@ struct objc_class : objc_object {
         return !hasCustomCore() && usesSwiftRefcounting();
     }
 
+    // 是否为存根类
     bool isStubClass() const {
         uintptr_t isa = (uintptr_t)isaBits();
         return 1 <= isa && isa < 16;
@@ -2268,8 +2273,10 @@ struct swift_class_t : objc_class {
 };
 
 // 类别结构
+// 不包含ivar表
 struct category_t {
     const char *name;
+    // 本类引用
     classref_t cls;
     WrappedPtr<method_list_t, PtrauthStrip> instanceMethods;
     WrappedPtr<method_list_t, PtrauthStrip> classMethods;

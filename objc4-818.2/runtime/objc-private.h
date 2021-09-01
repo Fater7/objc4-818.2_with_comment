@@ -472,12 +472,14 @@ public:
         nlcatlist_offset = (intptr_t)list - (intptr_t)&nlcatlist_offset;
     }
 
+    // 获取Mach-O中的类别
     category_t * const *catlist(size_t *outCount) const;
 
     void set_catlist(const void *list) {
         catlist_offset = (intptr_t)list - (intptr_t)&catlist_offset;
     }
 
+    // catlist2和catlist的区别是什么？
     category_t * const *catlist2(size_t *outCount) const;
 
     void set_catlist2(const void *list) {
@@ -654,6 +656,9 @@ extern void _objc_inform_on_crash(const char *fmt, ...) __attribute__((cold, for
 extern void _objc_inform_now_and_on_crash(const char *fmt, ...) __attribute__((cold, format (printf, 1, 2)));
 extern void _objc_inform_deprecated(const char *oldname, const char *newname) __attribute__((cold, noinline));
 extern void inform_duplicate(const char *name, Class oldCls, Class cls);
+
+/* Fater log */
+extern void FLog(const char *fmt, ...) __attribute__((cold, format(printf, 1, 2)));
 
 /* magic */
 extern Class _objc_getFreedObjectClass (void);

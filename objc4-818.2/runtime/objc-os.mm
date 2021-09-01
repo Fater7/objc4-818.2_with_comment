@@ -291,6 +291,7 @@ static header_info * addHeader(const headerType *mhdr, const char *path, int &to
 #if __OBJC2__
     {
         size_t count = 0;
+        // 获取section中的类信息
         if (_getObjc2ClassList(hi, &count)) {
             totalClasses += (int)count;
             if (!inSharedCache) unoptimizedTotalClasses += count;
@@ -298,6 +299,7 @@ static header_info * addHeader(const headerType *mhdr, const char *path, int &to
     }
 #endif
 
+    // 镜像信息存全局链表，load_images中用
     appendHeader(hi);
     
     return hi;
@@ -451,6 +453,7 @@ void objc_addLoadImageFunc(objc_func_loadImage _Nonnull func) {
 #include "objc-file-old.h"
 #endif
 
+// 读取镜像各DataSection信息
 void 
 map_images_nolock(unsigned mhCount, const char * const mhPaths[],
                   const struct mach_header * const mhdrs[])
@@ -476,13 +479,16 @@ map_images_nolock(unsigned mhCount, const char * const mhPaths[],
     hCount = 0;
 
     // Count classes. Size various table based on the total.
+    // 逐镜像加载信息
     int totalClasses = 0;
     int unoptimizedTotalClasses = 0;
     {
         uint32_t i = mhCount;
         while (i--) {
+            // typedef struct mach_header headerType;
             const headerType *mhdr = (const headerType *)mhdrs[i];
 
+            // 获取镜像header_info，获取镜像中的类数量
             auto hi = addHeader(mhdr, mhPaths[i], totalClasses, unoptimizedTotalClasses);
             if (!hi) {
                 // no objc data in this entry
@@ -593,6 +599,7 @@ map_images_nolock(unsigned mhCount, const char * const mhPaths[],
     }
 
     if (hCount > 0) {
+        // header_info列表，逐个处理
         _read_images(hList, hCount, totalClasses, unoptimizedTotalClasses);
     }
 
@@ -918,7 +925,7 @@ void _objc_atfork_child()
 * Bootstrap initialization. Registers our image notifier with dyld.
 * Called by libSystem BEFORE library initialization time
 **********************************************************************/
-
+// runtime启动入口
 void _objc_init(void)
 {
     static bool initialized = false;
@@ -936,6 +943,10 @@ void _objc_init(void)
 #endif
     _imp_implementationWithBlock_init();
 
+    // 注册dyld回调，在Mach-O加载的不同时机触发。
+    // map_images：镜像映射完成时执行，调用一次，加载OC各信息并存表。
+    // load_images：镜像初始化时执行，调用多次，分类信息存本类，调用所有+load。
+    // unmap_image：镜像卸载时执行，移除所有map_images中加载的信息。
     _dyld_objc_notify_register(&map_images, load_images, unmap_image);
 
 #if __OBJC2__
