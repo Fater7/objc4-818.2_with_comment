@@ -454,6 +454,9 @@ void objc_addLoadImageFunc(objc_func_loadImage _Nonnull func) {
 #endif
 
 // 读取镜像各DataSection信息
+// mhCount: mach-o数量
+// mhPaths: mach-o路径
+// mhdrs: mach-o头信息
 void 
 map_images_nolock(unsigned mhCount, const char * const mhPaths[],
                   const struct mach_header * const mhdrs[])

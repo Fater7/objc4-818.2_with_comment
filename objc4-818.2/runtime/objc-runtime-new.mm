@@ -3434,6 +3434,7 @@ Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
         if (mangledName) {
             //some Swift generic classes can lazily generate their names
             // 存类名到类的映射
+            // 大部分情况下没有Future类，直接走这里
             addNamedClass(cls, mangledName, replacing);
         } else {
             Class meta = cls->ISA();

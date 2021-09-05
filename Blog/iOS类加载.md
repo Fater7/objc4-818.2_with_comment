@@ -67,7 +67,7 @@ static Class popFutureNamedClass(const char *name)
 
 ## 加载主流程
 
-`runtime`启动的入口在`_objc_init`函数中。在这里，使用`_dyld_objc_notify_register`向`dyld`注册了三个回调方法：
+`runtime`启动的入口在`_objc_init`函数中。在这里，使用`_dyld_objc_notify_register`向`dyld`注册了三个回调方法`map_images`，`load_images`，`unmap_image`：
 
 ```cpp
 // objc-os.mm
@@ -79,20 +79,46 @@ void _objc_init(void)
 }
 ```
 
-抛去复杂的逻辑，这三个回调主要干了下述事情：
-
-- map_images
-
-在dyld映射镜像信息后触发，触发一次。加载所有的镜像头，读取镜像中的类、协议、方法等信息并记录到全局表中。
-
-- load_images
-
-在dyld初始化镜像信息后触发，触发多次。遍历记录所有类与分类的`+load`方法，并逐一执行。
-
-- unmap_image
-
-在dyld卸载镜像时触发。移除map_images时记录在全局表中的信息。
-
 ### map_images
 
-map_images加锁后调用map_images_nolock。map_images_nolock中对
+`map_images`在`dyld`将所有镜像文件映射到内存后执行。包含三个参数：
+
+- `mhCount`：镜像数量。
+- `mhPaths`：各镜像在磁盘中的路径。
+- `mhdrs`：`mach_header`结构数组，各镜像mach-o头信息。
+
+`map_images`加锁后调用`map_images_nolock`。`map_images_nolock`中调用`addHeader`方法，逐一生成包含每个镜像信息的`header_info`结构。所有`header_info`还会存入全局链表，供之后的`load_images`方法使用。
+
+有了`header_info`之后，通过`_read_images`方法读取镜像中的所有`SEL`、`Class`、`Protocol`信息，生成对应的结构并存入全局表。处理类信息的方法为`readClass`，在这里，会调用上一节中的`popFutureNamedClass`方法尝试获取该类名对应的`Future Class`，如果存在，则会使用`Future Class`提前分配好的内存存储该类信息。
+
+### load_images
+
+`load_images`方法的执行次数对应于镜像的数量，在每一个镜像初始化的时候都会执行。
+
+`load_images`首先会通过`loadAllCategories`方法遍历`map_images`中记录的`header_info`全局链表，处理所有镜像中的分类信息，将分类的内容添加至本类。该逻辑虽然由`load_images`发起，但在全局只会执行一次。
+
+之后，`load_images`会通过`prepare_load_methods`方法将所有本类与分类的`+load`方法的函数指针记录在全局表中。本类与分类的方法记录在了两个不同的表中，并且父类的`+load`方法信息会记录在子类之前。
+
+```cpp
+// objc-runtime-new.mm
+// 递归将本类load方法存表
+static void schedule_class_load(Class cls)
+{
+    if (!cls) return;
+    ASSERT(cls->isRealized());  // _read_images should realize
+
+    if (cls->data()->flags & RW_LOADED) return;
+
+    // 父类先于子类存储+load方法
+    schedule_class_load(cls->getSuperclass());
+
+    add_class_to_loadable_list(cls);
+    cls->setInfo(RW_LOADED); 
+}
+```
+
+在`+load`方法记录完成后，`load_images`通过`call_load_methods`方法依次执行所有`+load`方法函数指针，保证父类先于子类执行，本类先于分类执行。
+
+### unmap_image
+
+将`map_images`时加载到内存中的信息全部移除。
