@@ -164,6 +164,7 @@ _object_set_associative_reference(id object, const void *key, id value, uintptr_
     // rdar://problem/44094390
     if (!object && !value) return;
 
+    // 类不支持关联对象，报错
     if (object->getIsa()->forbidsAssociatedObjects())
         _objc_fatal("objc_setAssociatedObject called on instance (%p) of class %s which does not allow associated objects", object, object_getClassName(object));
 
@@ -171,14 +172,20 @@ _object_set_associative_reference(id object, const void *key, id value, uintptr_
     ObjcAssociation association{policy, value};
 
     // retain the new value (if any) outside the lock.
+    // 加引用计数
     association.acquireValue();
 
     bool isFirstAssociation = false;
     {
+        // 获取全剧唯一关联对象记录表
+        // 自旋锁操作放在管理类的构造与析构函数中
+        // 表结构：{DisguisedPtr<objc_object> -> {key -> ObjcAssociation}}
         AssociationsManager manager;
         AssociationsHashMap &associations(manager.get());
 
         if (value) {
+            // try_emplace返回的类型为pair<iterator, bool>
+            // bool值表示是否为新建立的值
             auto refs_result = associations.try_emplace(disguised, ObjectAssociationMap{});
             if (refs_result.second) {
                 /* it's the first association we make */
@@ -186,12 +193,17 @@ _object_set_associative_reference(id object, const void *key, id value, uintptr_
             }
 
             /* establish or replace the association */
+            // refs为{key -> ObjcAssociation}
             auto &refs = refs_result.first->second;
+            
+            // result为<{key -> ObjcAssociation}, bool>
             auto result = refs.try_emplace(key, std::move(association));
             if (!result.second) {
+                // 已有同key关联对象，替换值
                 association.swap(result.first->second);
             }
         } else {
+            // value为nil，移除
             auto refs_it = associations.find(disguised);
             if (refs_it != associations.end()) {
                 auto &refs = refs_it->second;

@@ -2198,6 +2198,8 @@ void arr_init(void)
 {
     AutoreleasePoolPage::init();
     SideTablesMap.init();
+    
+    // 关联对象表初始化
     _objc_associations_init();
 }
 
