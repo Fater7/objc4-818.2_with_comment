@@ -47,6 +47,7 @@
 		393CEAC60DC69E67000B69DE /* objc-references.h in Headers */ = {isa = PBXBuildFile; fileRef = 393CEAC50DC69E67000B69DE /* objc-references.h */; };
 		39ABD72312F0B61800D1054C /* objc-weak.h in Headers */ = {isa = PBXBuildFile; fileRef = 39ABD71F12F0B61800D1054C /* objc-weak.h */; };
 		39ABD72412F0B61800D1054C /* objc-weak.mm in Sources */ = {isa = PBXBuildFile; fileRef = 39ABD72012F0B61800D1054C /* objc-weak.mm */; };
+		5A014D8326EB0D0A004D94F2 /* Person+Student.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A014D8226EB0D0A004D94F2 /* Person+Student.m */; };
 		5ABC6C9B26CABFC900450C97 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 5ABC6C9A26CABFC900450C97 /* main.m */; };
 		5ABC6CA126CABFFC00450C97 /* libobjc.A.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D2AAC0630554660B00DB518D /* libobjc.A.dylib */; };
 		5ABC6CA426CAC07E00450C97 /* Person.m in Sources */ = {isa = PBXBuildFile; fileRef = 5ABC6CA326CAC07E00450C97 /* Person.m */; };
@@ -226,6 +227,8 @@
 		393CEAC50DC69E67000B69DE /* objc-references.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "objc-references.h"; path = "runtime/objc-references.h"; sourceTree = "<group>"; };
 		39ABD71F12F0B61800D1054C /* objc-weak.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "objc-weak.h"; path = "runtime/objc-weak.h"; sourceTree = "<group>"; };
 		39ABD72012F0B61800D1054C /* objc-weak.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = "objc-weak.mm"; path = "runtime/objc-weak.mm"; sourceTree = "<group>"; };
+		5A014D8126EB0D0A004D94F2 /* Person+Student.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Person+Student.h"; sourceTree = "<group>"; };
+		5A014D8226EB0D0A004D94F2 /* Person+Student.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "Person+Student.m"; sourceTree = "<group>"; };
 		5ABC6C9826CABFC900450C97 /* ObjcExample */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ObjcExample; sourceTree = BUILT_PRODUCTS_DIR; };
 		5ABC6C9A26CABFC900450C97 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		5ABC6CA226CAC07E00450C97 /* Person.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Person.h; sourceTree = "<group>"; };
@@ -477,6 +480,8 @@
 				5ABC6C9A26CABFC900450C97 /* main.m */,
 				5ABC6CA226CAC07E00450C97 /* Person.h */,
 				5ABC6CA326CAC07E00450C97 /* Person.m */,
+				5A014D8126EB0D0A004D94F2 /* Person+Student.h */,
+				5A014D8226EB0D0A004D94F2 /* Person+Student.m */,
 			);
 			path = ObjcExample;
 			sourceTree = "<group>";
@@ -873,6 +878,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5ABC6C9B26CABFC900450C97 /* main.m in Sources */,
+				5A014D8326EB0D0A004D94F2 /* Person+Student.m in Sources */,
 				5ABC6CA426CAC07E00450C97 /* Person.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

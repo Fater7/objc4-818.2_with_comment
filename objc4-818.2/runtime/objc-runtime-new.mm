@@ -4174,7 +4174,7 @@ extern void _method_setImplementationRawUnsafe(Method m, IMP imp)
     m->setImp(imp);
 }
 
-
+// 交换IMP
 void method_exchangeImplementations(Method m1, Method m2)
 {
     if (!m1  ||  !m2) return;
@@ -6217,6 +6217,7 @@ static Method _class_getMethod(Class cls, SEL sel)
 * class_getInstanceMethod.  Return the instance method for the
 * specified class and selector.
 **********************************************************************/
+// 根据SEL返回Method
 Method class_getInstanceMethod(Class cls, SEL sel)
 {
     if (!cls  ||  !sel) return nil;
@@ -7146,6 +7147,8 @@ addMethod(Class cls, SEL name, IMP imp, const char *types, bool replace)
     method_t *m;
     if ((m = getMethodNoSuper_nolock(cls, name))) {
         // already exists
+        // 方法已存在，返回已有IMP
+        // replace为true时替换成新IMP
         if (!replace) {
             result = m->imp(false);
         } else {
@@ -7153,6 +7156,7 @@ addMethod(Class cls, SEL name, IMP imp, const char *types, bool replace)
         }
     } else {
         // fixme optimize
+        // 方法不存在，添加Method，返回nil
         method_list_t *newlist;
         newlist = (method_list_t *)calloc(method_list_t::byteSize(method_t::bigSize, 1), 1);
         newlist->entsizeAndFlags = 
@@ -7240,7 +7244,7 @@ addMethods(Class cls, const SEL *names, const IMP *imps, const char **types,
     return failedNames;
 }
 
-
+// 添加方法，不替换。方法如果已存在就返回NO
 BOOL 
 class_addMethod(Class cls, SEL name, IMP imp, const char *types)
 {
@@ -7250,7 +7254,7 @@ class_addMethod(Class cls, SEL name, IMP imp, const char *types)
     return ! addMethod(cls, name, imp, types ?: "", NO);
 }
 
-
+// 添加方法，如果已存在就替换
 IMP 
 class_replaceMethod(Class cls, SEL name, IMP imp, const char *types)
 {

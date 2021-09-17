@@ -7,7 +7,9 @@
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+
 #import "Person.h"
+#import "Person+Student.h"
 
 int main(int argc, const char * argv[]) {
     // Property
@@ -25,6 +27,10 @@ int main(int argc, const char * argv[]) {
         Method m = methods[i];
         NSLog(@"%@_%s", NSStringFromSelector(method_getName(m)), method_getTypeEncoding(m));
     }
+
+    Person *p = [Person new];
+    p.school = @"ss";
+    
 
     return 0;
 }
