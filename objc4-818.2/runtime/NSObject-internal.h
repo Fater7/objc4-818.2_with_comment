@@ -133,11 +133,17 @@ struct AutoreleasePoolPageData
     static_assert((AutoreleasePoolEntry){ .ptr = MACH_VM_MAX_ADDRESS }.ptr == MACH_VM_MAX_ADDRESS, "MACH_VM_MAX_ADDRESS doesn't fit into AutoreleasePoolEntry::ptr!");
 #endif
 
+    // 校验
 	magic_t const magic;
+    // 标识该Page当前已存储起点
 	__unsafe_unretained id *next;
+    // Page所处线程
 	pthread_t const thread;
+    // 前向节点
 	AutoreleasePoolPage * const parent;
+    // 后向节点
 	AutoreleasePoolPage *child;
+    // 该Page在链表中的深度（位置）
 	uint32_t const depth;
 	uint32_t hiwat;
 

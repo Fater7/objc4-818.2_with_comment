@@ -690,6 +690,7 @@ class AutoreleasePoolPage : private AutoreleasePoolPageData
 	friend struct thread_data_t;
 
 public:
+    // 一页存储大小，单位Byte
 	static size_t const SIZE =
 #if PROTECT_AUTORELEASEPOOL
 		PAGE_MAX_SIZE;  // must be multiple of vm page size
@@ -830,11 +831,12 @@ private:
 #endif
     }
 
-
+    // 对象存储起点
     id * begin() {
         return (id *) ((uint8_t *)this+sizeof(*this));
     }
 
+    // 对象存储终点
     id * end() {
         return (id *) ((uint8_t *)this+SIZE);
     }
@@ -1064,12 +1066,16 @@ private:
 
     static inline id *autoreleaseFast(id obj)
     {
+        // 获取当前活动页
         AutoreleasePoolPage *page = hotPage();
         if (page && !page->full()) {
+            // 存在且未满，直接添加
             return page->add(obj);
         } else if (page) {
+            // 已满，新建并添加
             return autoreleaseFullPage(obj, page);
         } else {
+            // 未存在，创建并添加
             return autoreleaseNoPage(obj);
         }
     }
@@ -1170,6 +1176,7 @@ public:
             // Each autorelease pool starts on a new pool page.
             dest = autoreleaseNewPage(POOL_BOUNDARY);
         } else {
+            // 只会走这里
             dest = autoreleaseFast(POOL_BOUNDARY);
         }
         ASSERT(dest == EMPTY_POOL_PLACEHOLDER || *dest == POOL_BOUNDARY);
