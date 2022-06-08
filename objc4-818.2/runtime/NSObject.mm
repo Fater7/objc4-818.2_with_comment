@@ -966,6 +966,7 @@ private:
         // Not recursive: we don't want to blow out the stack 
         // if a thread accumulates a stupendous amount of garbage
         AutoreleasePoolPage *page = this;
+        // 先取到尾，再往前删
         while (page->child) page = page->child;
 
         AutoreleasePoolPage *deathptr;
@@ -981,6 +982,7 @@ private:
         } while (deathptr != this);
     }
 
+    // 子线程销毁时，从pthread_exit走到这里释放
     static void tls_dealloc(void *p) 
     {
         if (p == (void*)EMPTY_POOL_PLACEHOLDER) {
@@ -993,7 +995,7 @@ private:
 
         if (AutoreleasePoolPage *page = coldPage()) {
             if (!page->empty()) objc_autoreleasePoolPop(page->begin());  // pop all of the pools
-            if (slowpath(DebugMissingPools || DebugPoolAllocation)) {
+            if (slowpath(DebugMissingPools || DebugPoolAllocation /*false*/)) {
                 // pop() killed the pages already
             } else {
                 page->kill();  // free all of the pages
@@ -1051,6 +1053,7 @@ private:
         tls_set_direct(key, (void *)page);
     }
 
+    // 获取当前页所处链表的根节点
     static inline AutoreleasePoolPage *coldPage() 
     {
         AutoreleasePoolPage *result = hotPage();
@@ -1066,7 +1069,7 @@ private:
 
     static inline id *autoreleaseFast(id obj)
     {
-        // 获取当前活动页
+        // 获取当前活动Page
         AutoreleasePoolPage *page = hotPage();
         if (page && !page->full()) {
             // 存在且未满，直接添加
@@ -1087,7 +1090,7 @@ private:
         // Step to the next non-full page, adding a new page if necessary.
         // Then add the object to that page.
         ASSERT(page == hotPage());
-        ASSERT(page->full()  ||  DebugPoolAllocation);
+        ASSERT(page->full()  ||  DebugPoolAllocation /*false*/);
 
         do {
             if (page->child) page = page->child;
@@ -1124,10 +1127,12 @@ private:
             objc_autoreleaseNoPool(obj);
             return nil;
         }
-        else if (obj == POOL_BOUNDARY  &&  !DebugPoolAllocation) {
+        else if (obj == POOL_BOUNDARY  &&  !DebugPoolAllocation /*false*/) {
             // We are pushing a pool with no pool in place,
             // and alloc-per-pool debugging was not requested.
             // Install and return the empty pool placeholder.
+            // 每个线程第一次push，会先TLS存储占位符标志，并返回占位符EMPTY_POOL_PLACEHOLDER
+            // 占位符会作为pop时的入参
             return setEmptyPoolPlaceholder();
         }
 
@@ -1138,6 +1143,8 @@ private:
         setHotPage(page);
         
         // Push a boundary on behalf of the previously-placeholder'd pool.
+        // 如果已经存在占位符，则新Page需要压栈哨兵。
+        // 如果没有使用@autoreleasepool，直接调用autorelease方法，则不存在占位符
         if (pushExtraBoundary) {
             page->add(POOL_BOUNDARY);
         }
@@ -1158,7 +1165,9 @@ private:
 public:
     static inline id autorelease(id obj)
     {
+        // 标签指针和Nil直接断言
         ASSERT(!obj->isTaggedPointerOrNil());
+        // 对象存入Page
         id *dest __unused = autoreleaseFast(obj);
 #if SUPPORT_AUTORELEASEPOOL_DEDUP_PTRS
         ASSERT(!dest  ||  dest == EMPTY_POOL_PLACEHOLDER  ||  (id)((AutoreleasePoolEntry *)dest)->ptr == obj);
@@ -1172,11 +1181,12 @@ public:
     static inline void *push() 
     {
         id *dest;
-        if (slowpath(DebugPoolAllocation)) {
+        if (slowpath(DebugPoolAllocation /*false*/)) {
             // Each autorelease pool starts on a new pool page.
+            // 每次使用autorelease都新建Page，不使用POOL_BOUNDARY哨兵隔开，仅Debug下
             dest = autoreleaseNewPage(POOL_BOUNDARY);
         } else {
-            // 只会走这里
+            // 真正流程
             dest = autoreleaseFast(POOL_BOUNDARY);
         }
         ASSERT(dest == EMPTY_POOL_PLACEHOLDER || *dest == POOL_BOUNDARY);
@@ -1189,7 +1199,7 @@ public:
         // Error. For bincompat purposes this is not 
         // fatal in executables built with old SDKs.
 
-        if (DebugPoolAllocation || sdkIsAtLeast(10_12, 10_0, 10_0, 3_0, 2_0)) {
+        if (DebugPoolAllocation /*false*/ || sdkIsAtLeast(10_12, 10_0, 10_0, 3_0, 2_0)) {
             // OBJC_DEBUG_POOL_ALLOCATION or new SDK. Bad pop is fatal.
             _objc_fatal
                 ("Invalid or prematurely-freed autorelease pool %p.", token);
@@ -1209,31 +1219,35 @@ public:
         objc_autoreleasePoolInvalid(token);
     }
 
-    template<bool allowDebug>
+    template<bool allowDebug /*false*/>
     static void
     popPage(void *token, AutoreleasePoolPage *page, id *stop)
     {
-        if (allowDebug && PrintPoolHiwat) printHiwat();
+        if (allowDebug /*false*/ && PrintPoolHiwat) printHiwat();
 
         page->releaseUntil(stop);
 
+        // 删除空页表
         // memory: delete empty children
-        if (allowDebug && DebugPoolAllocation  &&  page->empty()) {
+        if (allowDebug /*false*/ && DebugPoolAllocation /*false*/  &&  page->empty()) {
             // special case: delete everything during page-per-pool debugging
             AutoreleasePoolPage *parent = page->parent;
             page->kill();
             setHotPage(parent);
-        } else if (allowDebug && DebugMissingPools  &&  page->empty()  &&  !page->parent) {
+        } else if (allowDebug /*false*/ && DebugMissingPools  &&  page->empty()  &&  !page->parent) {
             // special case: delete everything for pop(top)
             // when debugging missing autorelease pools
             page->kill();
             setHotPage(nil);
         } else if (page->child) {
             // hysteresis: keep one empty child if page is more than half full
+            // 只会走这里
             if (page->lessThanHalfFull()) {
+                // 当前页存量小于一半，从下一页开始删
                 page->child->kill();
             }
             else if (page->child->child) {
+                // 否则从下下一页开始删
                 page->child->child->kill();
             }
         }
@@ -1252,15 +1266,19 @@ public:
         AutoreleasePoolPage *page;
         id *stop;
         if (token == (void*)EMPTY_POOL_PLACEHOLDER) {
+            // 自动释放池pop入口
             // Popping the top-level placeholder pool.
             page = hotPage();
             if (!page) {
                 // Pool was never used. Clear the placeholder.
+                // 未建立过page，直接置空占位符
                 return setHotPage(nil);
             }
             // Pool was used. Pop its contents normally.
             // Pool pages remain allocated for re-use as usual.
+            // 获取页表根节点
             page = coldPage();
+            // 重置token为根页起点
             token = page->begin();
         } else {
             page = pageForPointer(token);
@@ -1268,6 +1286,7 @@ public:
 
         stop = (id *)token;
         if (*stop != POOL_BOUNDARY) {
+            // stop不为哨兵时的兜底
             if (stop == page->begin()  &&  !page->parent) {
                 // Start of coldest page may correctly not be POOL_BOUNDARY:
                 // 1. top-level pool is popped, leaving the cold page in place
@@ -1279,7 +1298,8 @@ public:
             }
         }
 
-        if (slowpath(PrintPoolHiwat || DebugPoolAllocation || DebugMissingPools)) {
+        // 不用管
+        if (slowpath(PrintPoolHiwat || DebugPoolAllocation /*false*/ || DebugMissingPools)) {
             return popPageDebug(token, page, stop);
         }
 
