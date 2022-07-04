@@ -83,12 +83,13 @@ struct weak_entry_t {
         struct {
             weak_referrer_t *referrers;
             uintptr_t        out_of_line_ness : 2;
-            uintptr_t        num_refs : PTR_MINUS_2;
-            uintptr_t        mask;
-            uintptr_t        max_hash_displacement;
+            uintptr_t        num_refs : PTR_MINUS_2;    // 持有的弱引用数量，不等于已申请的长度
+            uintptr_t        mask;  // 已申请长度-1
+            uintptr_t        max_hash_displacement; // 初始为0，再插入新引用的过程中不断被赋值为插入运算中得出的最大hash重置次数
         };
         struct {
             // out_of_line_ness field is low bits of inline_referrers[1]
+            // 4缓存位
             weak_referrer_t  inline_referrers[WEAK_INLINE_COUNT];
         };
     };
@@ -117,9 +118,13 @@ struct weak_entry_t {
  * and weak_entry_t structs as their values.
  */
 struct weak_table_t {
+    // 每个entry包含着被引用对象与弱引用指针间的一对多关系
     weak_entry_t *weak_entries;
+    // 有效entry数量
     size_t    num_entries;
+    // 已申请总长度
     uintptr_t mask;
+    // 最大哈希重置次数 
     uintptr_t max_hash_displacement;
 };
 

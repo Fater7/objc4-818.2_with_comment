@@ -509,7 +509,7 @@ objc_object::setWeaklyReferenced_nolock()
     do {
         newisa = oldisa;
         if (slowpath(!newisa.nonpointer)) {
-            ClearExclusive(&isa.bits);
+            ClearExclusive(&isa.bits);  // 空函数
             sidetable_setWeaklyReferenced_nolock();
             return;
         }

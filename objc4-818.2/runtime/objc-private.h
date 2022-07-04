@@ -926,7 +926,7 @@ enum { CacheLineSize = 64 };
 template<typename T>
 class StripedMap {
 #if TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
-    enum { StripeCount = 8 };
+    enum { StripeCount = 8 };   // 移动端有8个表
 #else
     enum { StripeCount = 64 };
 #endif
@@ -937,6 +937,7 @@ class StripedMap {
 
     PaddedT array[StripeCount];
 
+    // hash取下标
     static unsigned int indexForPointer(const void *p) {
         uintptr_t addr = reinterpret_cast<uintptr_t>(p);
         return ((addr >> 4) ^ (addr >> 9)) % StripeCount;
