@@ -6045,12 +6045,14 @@ ALWAYS_INLINE static method_t *
 findMethodInSortedMethodList(SEL key, const method_list_t *list)
 {
     if (list->isSmallList()) {
+        // small，M1上的新特性
         if (CONFIG_SHARED_CACHE_RELATIVE_DIRECT_SELECTORS && objc::inSharedCache((uintptr_t)list)) {
             return findMethodInSortedMethodList(key, list, [](method_t &m) { return m.getSmallNameAsSEL(); });
         } else {
             return findMethodInSortedMethodList(key, list, [](method_t &m) { return m.getSmallNameAsSELRef(); });
         }
     } else {
+        // 正常走这里，第三个参数是函数指针
         return findMethodInSortedMethodList(key, list, [](method_t &m) { return m.big().name; });
     }
 }
@@ -6086,9 +6088,11 @@ search_method_list_inline(const method_list_t *mlist, SEL sel)
     int methodListHasExpectedSize = mlist->isExpectedSize();
     
     if (fastpath(methodListIsFixedUp && methodListHasExpectedSize)) {
+        // 有序二分查找
         return findMethodInSortedMethodList(sel, mlist);
     } else {
         // Linear search of unsorted method list
+        // 无序直接遍历
         if (auto *m = findMethodInUnsortedMethodList(sel, mlist))
             return m;
     }
@@ -6168,6 +6172,7 @@ getMethodNoSuper_nolock(Class cls, SEL sel)
         // caller of search_method_list, inlining it turns
         // getMethodNoSuper_nolock into a frame-less function and eliminates
         // any store from this codepath.
+        // 从方法列表中查找匹配方法
         method_t *m = search_method_list_inline(*mlists, sel);
         if (m) return m;
     }
@@ -6297,6 +6302,7 @@ static void resolveClassMethod(id inst, SEL sel, Class cls)
 * cls may be a metaclass or a non-meta class.
 * Does not check if the method already exists.
 **********************************************************************/
+// 实例方法动态解析
 static void resolveInstanceMethod(id inst, SEL sel, Class cls)
 {
     runtimeLock.assertUnlocked();
@@ -6304,15 +6310,18 @@ static void resolveInstanceMethod(id inst, SEL sel, Class cls)
     SEL resolve_sel = @selector(resolveInstanceMethod:);
 
     if (!lookUpImpOrNilTryCache(cls, resolve_sel, cls->ISA(/*authenticated*/true))) {
+        // 没有实现
         // Resolver not implemented.
         return;
     }
 
     BOOL (*msg)(Class, SEL, SEL) = (typeof(msg))objc_msgSend;
+    // 执行动态方法解析，resolveInstanceMethod
     bool resolved = msg(cls, resolve_sel, sel);
 
     // Cache the result (good or bad) so the resolver doesn't fire next time.
     // +resolveInstanceMethod adds to self a.k.a. cls
+    // 如何添加的缓存？
     IMP imp = lookUpImpOrNilTryCache(inst, sel, cls);
 
     if (resolved  &&  PrintResolving) {
@@ -6435,16 +6444,19 @@ realizeAndInitializeIfNeeded_locked(id inst, Class cls, bool initialize)
 *   must be converted to _objc_msgForward or _objc_msgForward_stret.
 *   If you don't want forwarding at all, use LOOKUP_NIL.
 **********************************************************************/
+/// 标准方法查找流程
 ALWAYS_INLINE
 static IMP _lookUpImpTryCache(id inst, SEL sel, Class cls, int behavior)
 {
     runtimeLock.assertUnlocked();
 
+    // 大概率不走这里
     if (slowpath(!cls->isInitialized())) {
         // see comment in lookUpImpOrForward
         return lookUpImpOrForward(inst, sel, cls, behavior);
     }
 
+    // 先从缓存中查找,汇编实现
     IMP imp = cache_getImp(cls, sel);
     if (imp != NULL) goto done;
 #if CONFIG_USE_PREOPT_CACHES
@@ -6452,6 +6464,7 @@ static IMP _lookUpImpTryCache(id inst, SEL sel, Class cls, int behavior)
         imp = cache_getImp(cls->cache.preoptFallbackClass(), sel);
     }
 #endif
+    // 缓存没找到
     if (slowpath(imp == NULL)) {
         return lookUpImpOrForward(inst, sel, cls, behavior);
     }
@@ -6516,6 +6529,7 @@ IMP lookUpImpOrForward(id inst, SEL sel, Class cls, int behavior)
     // To make these harder we want to make sure this is a class that was
     // either built into the binary or legitimately registered through
     // objc_duplicateClass, objc_initializeClassPair or objc_allocateClassPair.
+    // 防黑客注入
     checkIsKnownClass(cls);
 
     cls = realizeAndInitializeIfNeeded_locked(inst, cls, behavior & LOOKUP_INITIALIZE);
@@ -6539,12 +6553,15 @@ IMP lookUpImpOrForward(id inst, SEL sel, Class cls, int behavior)
 #endif
         } else {
             // curClass method list.
+            // 当前类中查找
             Method meth = getMethodNoSuper_nolock(curClass, sel);
             if (meth) {
                 imp = meth->imp(false);
                 goto done;
             }
 
+            // 当前类无方法
+            // 父类为nil
             if (slowpath((curClass = curClass->getSuperclass()) == nil)) {
                 // No implementation found, and method resolver didn't help.
                 // Use forwarding.
@@ -6559,6 +6576,7 @@ IMP lookUpImpOrForward(id inst, SEL sel, Class cls, int behavior)
         }
 
         // Superclass cache.
+        // 查找父类缓存
         imp = cache_getImp(curClass, sel);
         if (slowpath(imp == forward_imp)) {
             // Found a forward:: entry in a superclass.
@@ -6573,7 +6591,7 @@ IMP lookUpImpOrForward(id inst, SEL sel, Class cls, int behavior)
     }
 
     // No implementation found. Try method resolver once.
-
+    // 动态方法解析
     if (slowpath(behavior & LOOKUP_RESOLVER)) {
         behavior ^= LOOKUP_RESOLVER;
         return resolveMethod_locked(inst, sel, cls, behavior);
@@ -6586,6 +6604,7 @@ IMP lookUpImpOrForward(id inst, SEL sel, Class cls, int behavior)
             cls = cls->cache.preoptFallbackClass();
         }
 #endif
+        // 方法插入缓存
         log_and_fill_cache(cls, imp, sel, inst, curClass);
     }
  done_unlock:

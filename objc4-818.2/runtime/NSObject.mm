@@ -154,6 +154,7 @@ struct SideTable {
     // 每个表有一个自旋锁
     spinlock_t slock;
     RefcountMap refcnts;
+    // 维护被引用对象到弱引用的一对多关系
     weak_table_t weak_table;
 
     SideTable() {

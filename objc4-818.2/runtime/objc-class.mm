@@ -664,7 +664,7 @@ IMP class_lookupMethod(Class cls, SEL sel)
     return class_getMethodImplementation(cls, sel);
 }
 
-__attribute__((flatten))
+__attribute__((flatten))    // 该函数调用的所有函数，尽量inline
 IMP class_getMethodImplementation(Class cls, SEL sel)
 {
     IMP imp;
@@ -676,6 +676,7 @@ IMP class_getMethodImplementation(Class cls, SEL sel)
     imp = lookUpImpOrNilTryCache(nil, sel, cls, LOOKUP_INITIALIZE | LOOKUP_RESOLVER);
 
     // Translate forwarding function to C-callable external version
+    // imp不存在，启用消息转发流程
     if (!imp) {
         return _objc_msgForward;
     }
